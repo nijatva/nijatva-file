@@ -10,8 +10,8 @@ android {
         applicationId = "com.nijatva.file"
         minSdk = 23
         targetSdk = 34
-        versionCode = 32
-        versionName = "32.0"
+        versionCode = 33
+        versionName = "33.0"
     }
 
     buildTypes {
