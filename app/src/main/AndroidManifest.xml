@@ -11,7 +11,23 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 
-    <application
+        <queries>
+        <package android:name="com.nijatva.messages" />
+        <package android:name="com.nijatva.contacts" />
+        <package android:name="com.nijatva.dialer" />
+        <package android:name="com.nijatva.file" />
+        <package android:name="com.nijatva.gallery" />
+        <package android:name="com.nijatva.camera" />
+        <package android:name="com.nijatva.music.player" />
+        <package android:name="in.nijatva.browser" />
+        <package android:name="com.nijatva.drive" />
+            <package android:name="com.nijatva.photos" />
+        <package android:name="com.nijatva.photo.editor" />
+        <package android:name="com.nijatva.videoplayer" />
+        <package android:name="com.nijatva.mini.x" />
+        <package android:name="com.nijatva.wtrlab" />
+    </queries>
+<application
         android:allowBackup="true"
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
@@ -97,5 +113,12 @@
             android:authorities="com.nijatva.file.files"
             android:exported="false"
             android:grantUriPermissions="true" />
-    </application>
+            <!-- Nijatva signature: who made this build, for anyone who inspects the APK -->
+        <meta-data android:name="developer.name" android:value="Vasudev Dangaya" />
+        <meta-data android:name="developer.origin" android:value="India" />
+        <meta-data android:name="developer.site" android:value="https://vasudev-work.github.io" />
+        <meta-data android:name="nijatva.suite" android:value="Nijatva" />
+        <meta-data android:name="nijatva.signature" android:value="com.nijatva.signature" />
+
+</application>
 </manifest>
