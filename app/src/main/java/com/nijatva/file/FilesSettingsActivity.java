@@ -47,7 +47,10 @@ public class FilesSettingsActivity extends Activity {
         c1.addView(divider());
         c1.addView(navRow("Device info", "Storage, RAM, battery, CPU", () -> startActivity(new android.content.Intent(this, DeviceInfoActivity.class))));
         c1.addView(divider());
-        c1.addView(navRow("File access (All files)", "Allow browsing every folder", () -> Fm.requestAllFiles(this)));
+        c1.addView(navRow("File access (All files)", "Allow browsing every folder", () -> {
+            if (android.os.Build.VERSION.SDK_INT >= 30) Fm.requestAllFiles(this);
+            else Fm.requestStorageAccess(this, 42);
+        }));
         c1.addView(divider());
         c1.addView(navRow("Set default app for opening files", null, () -> startActivity(new android.content.Intent(this, MimeTypesActivity.class))));
         c1.addView(divider());

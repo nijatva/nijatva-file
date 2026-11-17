@@ -29,6 +29,7 @@ public class OpenWithActivity extends Activity {
             finish();
             return;
         }
+        pruneCache();
         try {
             String path = resolvePath(uri);
             if (path == null) {
@@ -77,6 +78,17 @@ public class OpenWithActivity extends Activity {
             default:
                 return false;
         }
+    }
+
+    /** Delete cached copies older than a day. */
+    private void pruneCache() {
+        try {
+            File dir = new File(getCacheDir(), "incoming");
+            File[] arr = dir.listFiles();
+            if (arr == null) return;
+            long cut = System.currentTimeMillis() - 24L * 3600 * 1000;
+            for (File f : arr) if (f.lastModified() < cut) f.delete();
+        } catch (Exception ignored) { }
     }
 
     /** file:// → direct path; content:// → copy into cache so our viewers can read it. */

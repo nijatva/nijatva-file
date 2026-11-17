@@ -264,18 +264,61 @@ public class BrowserActivity extends Activity {
     }
 
     private void doSearch() {
-        String q = searchInput.getText().toString().trim();
+        final String q = searchInput.getText().toString().trim();
         if (q.isEmpty()) { load(); return; }
-        boolean all = searchAllBox != null && searchAllBox.isChecked();
+        final boolean all = searchAllBox != null && searchAllBox.isChecked();
         Store.setSearchAll(this, all);
-        File root = all ? Environment.getExternalStorageDirectory() : currentDir;
-        List<File> hits = Fm.search(root, q, all ? 10 : 8);
-        items.clear();
-        for (File f : hits) items.add(item(f));
-        title.setText("Search: " + q);
-        subtitle.setText(hits.size() + " results");
-        sectionLabel.setText((all ? "All storage" : currentDir.getName()) + " \u00B7 search results");
-        renderView();
+        final File root = all ? Environment.getExternalStorageDirectory() : currentDir;
+        subtitle.setText("Searching\u2026");
+        new Thread(() -> {
+            final List<File> hits = Fm.search(root, q, all ? 10 : 8);
+            runOnUiThread(() -> {
+                items.clear();
+                for (File f : hits) items.add(item(f));
+                title.setText("Search: " + q);
+                subtitle.setText(hits.size() + " results");
+                sectionLabel.setText((all ? "All storage" : currentDir.getName()) + " \u00B7 search results");
+                renderView();
+            });
+        }).start();
+    }
+
+    private void loadCategoryAsync() {
+        subtitle.setText("Loading\u2026");
+        final int cat = category;
+        new Thread(() -> {
+            final List<File> fs = Fm.byCategory(this, cat);
+            Fm.sort(fs, Store.sortBy(this), Store.sortAsc(this));
+            runOnUiThread(() -> {
+                items.clear();
+                for (File f : fs) items.add(item(f));
+                title.setText(Fm.catName(cat));
+                sectionLabel.setText(Fm.catName(cat));
+                subtitle.setText(items.isEmpty() ? "No files found \u2014 grant file access" : items.size() + " items in total");
+                renderView();
+            });
+        }).start();
+    }
+
+    private void loadRecentAsync() {
+        subtitle.setText("Loading\u2026");
+        new Thread(() -> {
+            long cut = System.currentTimeMillis() - 7L * 24 * 3600 * 1000;
+            List<File> all = new ArrayList<>();
+            all.addAll(Fm.byCategory(this, Fm.CAT_IMAGE));
+            all.addAll(Fm.byCategory(this, Fm.CAT_VIDEO));
+            all.addAll(Fm.byCategory(this, Fm.CAT_DOC));
+            final List<File> recent = new ArrayList<>();
+            for (File f : all) if (f.lastModified() >= cut) recent.add(f);
+            runOnUiThread(() -> {
+                items.clear();
+                for (File f : recent) items.add(item(f));
+                title.setText("Recent");
+                subtitle.setText(items.size() + " items in total");
+                sectionLabel.setText("Recent");
+                renderView();
+            });
+        }).start();
     }
 
     private void load() {
@@ -294,29 +337,8 @@ public class BrowserActivity extends Activity {
             renderView();
             return;
         }
-        if (newMode) {
-            long cut = System.currentTimeMillis() - 7L * 24 * 3600 * 1000;
-            List<File> all = new ArrayList<>();
-            all.addAll(Fm.byCategory(this, Fm.CAT_IMAGE));
-            all.addAll(Fm.byCategory(this, Fm.CAT_VIDEO));
-            all.addAll(Fm.byCategory(this, Fm.CAT_DOC));
-            for (File f : all) if (f.lastModified() >= cut) items.add(item(f));
-            title.setText("Recent");
-            subtitle.setText(items.size() + " items in total");
-            sectionLabel.setText("Recent");
-            renderView();
-            return;
-        }
-        if (category >= 0) {
-            List<File> fs = Fm.byCategory(this, category);
-            Fm.sort(fs, Store.sortBy(this), Store.sortAsc(this));
-            for (File f : fs) items.add(item(f));
-            title.setText(Fm.catName(category));
-            sectionLabel.setText(Fm.catName(category));
-            subtitle.setText(items.isEmpty() ? "No files found \u2014 grant file access" : items.size() + " items in total");
-            renderView();
-            return;
-        }
+        if (newMode) { loadRecentAsync(); return; }
+        if (category >= 0) { loadCategoryAsync(); return; }
 
         if (!currentDir.exists()) currentDir = Environment.getExternalStorageDirectory();
         boolean showHidden = Store.showHidden(this);
@@ -623,7 +645,14 @@ public class BrowserActivity extends Activity {
                         for (File f : files) {
                             if (Fm.catOf(f.getName()) != Fm.CAT_IMAGE) continue;
                             try {
-                                Bitmap bm = BitmapFactory.decodeFile(f.getAbsolutePath());
+                                BitmapFactory.Options bo = new BitmapFactory.Options();
+                                bo.inJustDecodeBounds = true;
+                                BitmapFactory.decodeFile(f.getAbsolutePath(), bo);
+                                int sc = 1;
+                                while (bo.outWidth / sc > 2400 || bo.outHeight / sc > 2400) sc *= 2;
+                                BitmapFactory.Options bo2 = new BitmapFactory.Options();
+                                bo2.inSampleSize = sc;
+                                Bitmap bm = BitmapFactory.decodeFile(f.getAbsolutePath(), bo2);
                                 if (bm == null) continue;
                                 String base = f.getName();
                                 int dot = base.lastIndexOf('.');
@@ -972,7 +1001,7 @@ public class BrowserActivity extends Activity {
     private void onBack() {
         if (selectionMode) { exitSelection(); return; }
         if (searching) { toggleSearch(); return; }
-        if (!appsMode && category < 0 && !newMode && !searchMode) {
+        if (!appsMode && category < 0 && !newMode && !searchMode && !largeMode) {
             File parent = currentDir.getParentFile();
             if (parent != null && currentDir.getAbsolutePath().length() > 1) {
                 currentDir = parent;
